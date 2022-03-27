@@ -1,30 +1,74 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility that Flutter provides. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/adapters.dart';
+import 'package:quiz_app/bloc/questionBloc/questionBloc.dart';
+import 'package:quiz_app/bloc/resultBloc/resultBloc.dart';
+import 'package:quiz_app/hive/questionModelHive.dart';
+import 'package:quiz_app/hive/resultModel.dart';
+import 'package:quiz_app/repository/resultRepository.dart';
+import 'package:quiz_app/response/questions.dart';
 
-import 'package:quiz_app/main.dart';
+void main(List<String> args) {
+  WidgetsFlutterBinding.ensureInitialized();
+  Hive
+    ..initFlutter()
+    ..registerAdapter(ResultModelAdapter())
+    ..registerAdapter(QuestionsModelAdapter());
+  group("QuestionBloc", () {
+    QuestionBloc questionBloc = QuestionBloc();
+    DateTime now = DateTime.now();
 
-void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    setUp(() {
+      questionBloc = QuestionBloc();
+      now = DateTime.now();
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    tearDown(() {
+      questionBloc.close();
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test("Questions has been inserted successfully and quiz has been started",
+        () async {
+      List<QuestionsModel> questions = List.generate(
+          Questions().questionsList.length,
+          (index) => QuestionsModel.fromJson(Questions().questionsList[index]));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      bool inserted = await ResultRepository().insertResult(
+          currentIndex: 0,
+          date: DateTime(now.year, now.month, now.day),
+          questionList: questions..shuffle());
+      expect(inserted, true);
+    });
+
+    test("Questions has been updated successfully", () async {
+      bool insertedList = await ResultRepository().updateQuestionList(
+          currentIndex: 1, date: DateTime(now.year, now.month, now.day));
+
+      expect(insertedList, true);
+    });
+  });
+  group("ResultBloc", () {
+    ResultBloc resultBloc = ResultBloc();
+    DateTime now = DateTime.now();
+
+    setUp(() {
+      resultBloc = ResultBloc();
+      now = DateTime.now();
+    });
+
+    tearDown(() {
+      resultBloc.close();
+    });
+
+    test("Current state of result", () async {
+      expect(resultBloc.state, InitialResultState());
+    });
+
+    test("You havent completed your quiz today", () async {
+      var questions = await ResultRepository()
+          .getResult(DateTime(now.year, now.month, now.day));
+
+      expect(questions, null);
+    });
   });
 }
