@@ -34,9 +34,11 @@ class ResultRepository {
         print(date);
         resultBox.putAt(index, myList[index]);
 
-        return myList[index];
+        return true;
       }
     }
+
+    return false;
   }
 
   endQuiz({required DateTime date}) async {
@@ -59,17 +61,20 @@ class ResultRepository {
       {required int currentIndex,
       required DateTime date,
       required questionList}) async {
-    await openResultBox();
-    var myList = resultBox.values.toList();
+    try {
+      await openResultBox();
+      var myList = resultBox.values.toList();
 
-    ResultModel result = ResultModel();
+      ResultModel result = ResultModel();
 
-    result.currentIndex = currentIndex;
-    result.date = date;
-    result.shuffeledList = questionList;
-    await resultBox.add(result);
-
-    print(myList);
+      result.currentIndex = currentIndex;
+      result.date = date;
+      result.shuffeledList = questionList;
+      await resultBox.add(result);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   getResult(DateTime date) async {
